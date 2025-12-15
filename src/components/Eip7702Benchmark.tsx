@@ -1,12 +1,8 @@
-import { useState } from 'react';
-import { createWalletClient, http } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
-import { baseSepolia } from 'viem/chains';
+import { useState, useEffect } from 'react';
+import { useBiconomy } from '../context/BiconomyContext';
 
 export function Eip7702Benchmark() {
-    const privateKey = import.meta.env.VITE_PRIVATE_KEY;
-    const account = privateKey ? privateKeyToAccount(privateKey as `0x${string}`) : null;
-
+    const { account, signAuthorization, authorization, error } = useBiconomy();
     const [logs, setLogs] = useState<string[]>([]);
 
     const addLog = (msg: string, data?: any) => {
@@ -15,37 +11,35 @@ export function Eip7702Benchmark() {
         console.log(msg, data || '');
     };
 
-    const runBenchmark = async () => {
-        setLogs([]); // Clear previous logs
+    // React to changes in authorization from context
+    useEffect(() => {
+        if (authorization) {
+            addLog('Authorization received from context:', authorization);
+        }
+    }, [authorization]);
 
+    // React to errors from context
+    useEffect(() => {
+        if (error) {
+            addLog('Error from context:', error.message);
+        }
+    }, [error]);
+
+    const runBenchmark = async () => {
+        setLogs([]); // Clear local logs
         if (!account) {
-            addLog('Error: VITE_PRIVATE_KEY is not set in .env');
+            addLog('Error: Account not initialized in context');
             return;
         }
 
         try {
             addLog('Account initialized:', account.address);
+            addLog('Requesting signature via BiconomyContext...');
 
-            const walletClient = createWalletClient({
-                chain: baseSepolia,
-                transport: http(),
-            });
-
-            const nexus120Singleton = '0x000000004F43C49e93C970E84001853a70923B03';
-
-            addLog('Signing Authorization for Nexus Singleton:', nexus120Singleton);
-
-            const authorization = await walletClient.signAuthorization({
-                account,
-                contractAddress: nexus120Singleton,
-                chainId: 0, // Valid across all chains
-                nonce: 0,   // For fresh accounts
-            });
-
-            addLog('Authorization Signed Successfully!', authorization);
+            await signAuthorization();
 
         } catch (err) {
-            addLog('Error:', err);
+            addLog('Error triggering signature:', err);
         }
     };
 
