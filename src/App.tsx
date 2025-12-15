@@ -3,6 +3,7 @@ import { TransactionBenchmark } from './components/TransactionBenchmark';
 import { MultiStepTransactionBenchmark } from './components/MultiStepTransactionBenchmark';
 import { BiconomyProvider } from './context/BiconomyContext';
 import { ExpandableSection } from './components/ExpandableSection';
+import { RuntimeInjectionBenchmark } from './components/RuntimeInjectionBenchmark';
 
 function App() {
   return (
@@ -20,6 +21,10 @@ function App() {
 
         <ExpandableSection title="3. Batch Transaction (Multi-Step)" defaultOpen={false}>
           <MultiStepTransactionBenchmark />
+        </ExpandableSection>
+
+        <ExpandableSection title="4. Runtime Injection (Sweep)">
+          <RuntimeInjectionBenchmark />
         </ExpandableSection>
       </div>
     </BiconomyProvider>
