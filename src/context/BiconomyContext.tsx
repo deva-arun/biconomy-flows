@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { toMultichainNexusAccount, getMEEVersion, MEEVersion } from "@biconomy/abstractjs";
+import { toMultichainNexusAccount, getMEEVersion, MEEVersion, createMeeClient } from "@biconomy/abstractjs";
 import { http, createWalletClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { base, arbitrum, baseSepolia } from "viem/chains";
 
 interface BiconomyContextType {
     orchestrator: any | null;
+    meeClient: any | null;
     loading: boolean;
     error: Error | null;
     account: any;
@@ -25,6 +26,7 @@ export function useBiconomy() {
 
 export function BiconomyProvider({ children }: { children: ReactNode }) {
     const [orchestrator, setOrchestrator] = useState<any | null>(null);
+    const [meeClient, setMeeClient] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
     const [account, setAccount] = useState<any | null>(null);
@@ -62,8 +64,13 @@ export function BiconomyProvider({ children }: { children: ReactNode }) {
                     signer: eoa
                 });
                 console.log("Biconomy Orchestrator initialized successfully");
-
                 setOrchestrator(orchestratorInstance);
+
+                console.log("Initializing MeeClient...");
+                const meeClientInstance = await createMeeClient({ account: orchestratorInstance });
+                console.log("MeeClient initialized successfully");
+                setMeeClient(meeClientInstance);
+
             } catch (err) {
                 console.error("Failed to initialize orchestrator:", err);
                 setError(err instanceof Error ? err : new Error('Unknown error initialization orchestrator'));
@@ -106,7 +113,7 @@ export function BiconomyProvider({ children }: { children: ReactNode }) {
     }
 
     return (
-        <BiconomyContext.Provider value={{ orchestrator, loading, error, account, authorization, signAuthorization }}>
+        <BiconomyContext.Provider value={{ orchestrator, meeClient, loading, error, account, authorization, signAuthorization }}>
             {children}
         </BiconomyContext.Provider>
     );

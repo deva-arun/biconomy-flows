@@ -1,32 +1,28 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useBiconomy } from '../context/BiconomyContext';
+import { useLogger } from '../hooks/useLogger';
+import { LogDisplay } from './LogDisplay';
 
 export function Eip7702Benchmark() {
     const { account, signAuthorization, authorization, error } = useBiconomy();
-    const [logs, setLogs] = useState<string[]>([]);
-
-    const addLog = (msg: string, data?: any) => {
-        const logEntry = `${msg} ${data ? JSON.stringify(data, (_, v) => typeof v === 'bigint' ? v.toString() : v, 2) : ''}`;
-        setLogs((prev) => [...prev, logEntry]);
-        console.log(msg, data || '');
-    };
+    const { logs, addLog, clearLogs } = useLogger();
 
     // React to changes in authorization from context
     useEffect(() => {
         if (authorization) {
             addLog('Authorization received from context:', authorization);
         }
-    }, [authorization]);
+    }, [authorization, addLog]);
 
     // React to errors from context
     useEffect(() => {
         if (error) {
             addLog('Error from context:', error.message);
         }
-    }, [error]);
+    }, [error, addLog]);
 
     const runBenchmark = async () => {
-        setLogs([]); // Clear local logs
+        clearLogs(); // Clear local logs
         if (!account) {
             addLog('Error: Account not initialized in context');
             return;
@@ -64,19 +60,7 @@ export function Eip7702Benchmark() {
                 Sign Authorization
             </button>
 
-            <div style={{
-                backgroundColor: '#f5f5f5',
-                padding: '1rem',
-                borderRadius: '8px',
-                fontFamily: 'monospace',
-                whiteSpace: 'pre-wrap',
-                minHeight: '200px',
-                border: '1px solid #ddd'
-            }}>
-                <span style={{ color: '#000000ff' }}>
-                    {logs.length === 0 ? 'Logs will appear here...' : logs.join('\n\n')}
-                </span>
-            </div>
+            <LogDisplay logs={logs} />
         </div>
     );
 }
