@@ -1,8 +1,11 @@
 import { Eip7702Benchmark } from './components/Eip7702Benchmark';
+import { BiconomyProvider } from './context/BiconomyContext';
 
 function App() {
   return (
-    <Eip7702Benchmark />
+    <BiconomyProvider>
+      <Eip7702Benchmark />
+    </BiconomyProvider>
   )
 }
 

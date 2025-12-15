@@ -2,10 +2,6 @@ import { useState } from 'react';
 import { createWalletClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { baseSepolia } from 'viem/chains';
-import { eip7702Actions } from 'viem/experimental';
-
-// Nexus Implementation v1.3.1 Address
-const NEXUS_IMPLEMENTATION_ADDRESS = '0x00000000561Dd60aEa485cDb26E4618B1E40Fd6E';
 
 export function Eip7702Benchmark() {
     const privateKey = import.meta.env.VITE_PRIVATE_KEY;
@@ -83,7 +79,9 @@ export function Eip7702Benchmark() {
                 minHeight: '200px',
                 border: '1px solid #ddd'
             }}>
-                {logs.length === 0 ? <span style={{ color: '#000000ff' }}>Logs will appear here...</span> : logs.join('\n\n')}
+                <span style={{ color: '#000000ff' }}>
+                    {logs.length === 0 ? 'Logs will appear here...' : logs.join('\n\n')}
+                </span>
             </div>
         </div>
     );
