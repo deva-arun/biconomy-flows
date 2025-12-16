@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { toMultichainNexusAccount, getMEEVersion, MEEVersion, createMeeClient } from "@biconomy/abstractjs";
+import { toMultichainNexusAccount, getMEEVersion, MEEVersion, createMeeClient, meeSessionActions } from "@biconomy/abstractjs";
 import { http, createWalletClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { base, arbitrum, baseSepolia } from "viem/chains";
@@ -68,8 +68,9 @@ export function BiconomyProvider({ children }: { children: ReactNode }) {
 
                 console.log("Initializing MeeClient...");
                 const meeClientInstance = await createMeeClient({ account: orchestratorInstance });
+                const meeClient = meeClientInstance.extend(meeSessionActions)
                 console.log("MeeClient initialized successfully");
-                setMeeClient(meeClientInstance);
+                setMeeClient(meeClient);
 
             } catch (err) {
                 console.error("Failed to initialize orchestrator:", err);
