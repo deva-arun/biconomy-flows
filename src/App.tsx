@@ -5,6 +5,7 @@ import { BiconomyProvider } from './context/BiconomyContext';
 import { ExpandableSection } from './components/ExpandableSection';
 import { RuntimeInjectionBenchmark } from './components/RuntimeInjectionBenchmark';
 import { SessionMultiStepBenchmark } from './components/SessionMultiStepBenchmark';
+import { SessionUAPMultiStepBenchmark } from './components/SessionUAPMultiStepBenchmark';
 
 function App() {
   return (
@@ -30,6 +31,10 @@ function App() {
 
         <ExpandableSection title="5. Session Multi-Step (Sudo)">
           <SessionMultiStepBenchmark />
+        </ExpandableSection>
+
+        <ExpandableSection title="6. Session Multi-Step (UAP Limits)">
+          <SessionUAPMultiStepBenchmark />
         </ExpandableSection>
       </div>
     </BiconomyProvider>

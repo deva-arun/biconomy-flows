@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useBiconomy } from '../context/BiconomyContext';
 import { base } from 'viem/chains';
-import { parseAbi, toFunctionSelector, getAbiItem, encodeFunctionData, parseUnits } from 'viem';
+import { parseAbi, toFunctionSelector, getAbiItem, encodeFunctionData, parseUnits, pad, toHex, maxUint256 } from 'viem';
 import { useLogger } from '../hooks/useLogger';
 import { LogDisplay } from './LogDisplay';
-import { getSudoPolicy } from '@biconomy/abstractjs';
+import { getUniversalActionPolicy, ParamCondition } from '@biconomy/abstractjs';
 
-export function SessionMultiStepBenchmark() {
+export function SessionUAPMultiStepBenchmark() {
     const { meeClient, sessionMeeClient, sessionSigner, account } = useBiconomy();
     const { logs, addLog, clearLogs } = useLogger();
     const { logs: execLogs, addLog: addExecLog, clearLogs: clearExecLogs } = useLogger();
@@ -19,7 +19,7 @@ export function SessionMultiStepBenchmark() {
     const usdcAddress = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
     const erc20Abi = parseAbi(['function transfer(address to, uint256 amount) returns (bool)']);
 
-    const grantSessionPermission = async () => {
+    const grantUAPSessionPermission = async () => {
         clearLogs();
         setLoading(true);
 
@@ -30,8 +30,61 @@ export function SessionMultiStepBenchmark() {
         }
 
         try {
-            addLog('Granting Permission to Session Signer with Sudo Policy...');
+            addLog('Granting Permission to Session Signer with Universal Action Policy...');
             addLog(`Session Signer: ${sessionSigner.address}`);
+
+            // 1. Time Limit: 5 minutes from now
+            const sessionValidUntil = Math.round(Date.now() / 1000) + 300;
+            addLog(`Session Valid Until: ${new Date(sessionValidUntil * 1000).toLocaleTimeString()}`);
+
+            // 2. Spend Limit: 10 USDC
+            const limitAmount = parseUnits('10', 6);
+            addLog(`Spend Limit: 10 USDC (${limitAmount.toString()})`);
+
+
+            const EMPTY_RAW_RULE = {
+                condition: ParamCondition.EQUAL,
+                offset: 0n,
+                isLimited: false,
+                ref: "0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`,
+                usage: { limit: 0n, used: 0n }
+            }
+
+            // Construct UAP
+            const uapPolicy = getUniversalActionPolicy({
+                valueLimitPerUse: maxUint256,
+                paramRules: {
+                    length: 1n,
+                    rules: [
+                        // Rule 1 'amount' (offset 32) - Limit per tx < 10 USDC (just as an example rule)
+                        // AND we set a global usage limit of 10 USDC
+                        {
+                            condition: ParamCondition.LESS_THAN_OR_EQUAL,
+                            offset: 32n,
+                            isLimited: true,
+                            ref: pad(toHex(limitAmount)),
+                            usage: { limit: limitAmount, used: 0n }
+
+                        },
+                        EMPTY_RAW_RULE,
+                        EMPTY_RAW_RULE,
+                        EMPTY_RAW_RULE,
+                        EMPTY_RAW_RULE,
+                        EMPTY_RAW_RULE,
+                        EMPTY_RAW_RULE,
+                        EMPTY_RAW_RULE,
+                        EMPTY_RAW_RULE,
+                        EMPTY_RAW_RULE,
+                        EMPTY_RAW_RULE,
+                        EMPTY_RAW_RULE,
+                        EMPTY_RAW_RULE,
+                        EMPTY_RAW_RULE,
+                        EMPTY_RAW_RULE,
+                        EMPTY_RAW_RULE,
+
+                    ]
+                }
+            });
 
             const details = await meeClient.grantPermissionTypedDataSign({
                 redeemer: sessionSigner.address,
@@ -42,18 +95,19 @@ export function SessionMultiStepBenchmark() {
                 actions: [
                     {
                         chainId: base.id,
-                        actionTarget: account.address,
+                        actionTarget: account.address, // USDC Contract
                         actionTargetSelector: toFunctionSelector(getAbiItem({ abi: erc20Abi, name: 'transfer' })),
-                        actionPolicies: [getSudoPolicy()]
+                        actionPolicies: [uapPolicy]
                     }
                 ],
+                sessionValidUntil, // Enforce time limit on the session itself
                 maxPaymentAmount: parseUnits('1', 6) // 1 USDC max fee
             });
 
             addLog('Permission Granted!');
             console.log('Session Details:', details);
             setSessionDetails(details);
-            setMode('ENABLE_AND_USE'); // Reset mode for new permission
+            setMode('ENABLE_AND_USE');
 
         } catch (err: any) {
             addLog('Error granting permission:', err);
@@ -70,26 +124,16 @@ export function SessionMultiStepBenchmark() {
         clearExecLogs();
 
         try {
-            addExecLog(`Executing Multi-Step Transaction via Session (Mode: ${mode})...`);
+            addExecLog(`Executing UAP Session Transaction (Mode: ${mode})...`);
             console.log('Session details during execution', sessionDetails);
 
-            // Instruction 1: Transfer 0.0001 USDC (100 in units)
+            // Instruction 1: Transfer 5 USDC
             const call1 = {
                 to: usdcAddress,
                 data: encodeFunctionData({
                     abi: erc20Abi,
                     functionName: 'transfer',
-                    args: [account.address, 100n]
-                })
-            };
-
-            // Instruction 2: Transfer 0.0002 USDC (200 in units)
-            const call2 = {
-                to: usdcAddress,
-                data: encodeFunctionData({
-                    abi: erc20Abi,
-                    functionName: 'transfer',
-                    args: [account.address, 200n]
+                    args: [sessionSigner.address, parseUnits('5', 6)]
                 })
             };
 
@@ -100,14 +144,9 @@ export function SessionMultiStepBenchmark() {
                     address: usdcAddress,
                     chainId: base.id
                 },
-                //verificationGasLimit: 2_500_000n, // Optional
                 instructions: [
                     {
                         calls: [call1],
-                        chainId: base.id
-                    },
-                    {
-                        calls: [call2],
                         chainId: base.id
                     }
                 ],
@@ -134,13 +173,13 @@ export function SessionMultiStepBenchmark() {
 
     return (
         <div style={{ padding: '2rem', fontFamily: 'system-ui', borderTop: '1px solid #ccc', marginTop: '20px' }}>
-            <h1>Session Multi-Step Benchmark (Sudo Policy)</h1>
+            <h1>Session Multi-Step (UAP Limits)</h1>
             <p style={{ fontSize: '14px', color: '#666' }}>
-                Uses a Smart Session with Sudo Policy to execute a batch of USDC transfers.
+                Universal Action Policy: Expires in 5 mins, Max 10 USDC cumulative spend.
             </p>
 
             <button
-                onClick={grantSessionPermission}
+                onClick={grantUAPSessionPermission}
                 disabled={loading || !sessionSigner}
                 style={{
                     padding: '10px 20px',
@@ -154,7 +193,7 @@ export function SessionMultiStepBenchmark() {
                     marginRight: '10px'
                 }}
             >
-                {loading ? 'Granting...' : '1. Grant Session Permission'}
+                {loading ? 'Granting...' : '1. Grant UAP Permission'}
             </button>
             {!sessionSigner && <div style={{ color: 'orange', marginBottom: '10px' }}>Warning: Session Signer not initialized</div>}
 
@@ -162,7 +201,7 @@ export function SessionMultiStepBenchmark() {
 
             {sessionDetails && (
                 <div style={{ marginTop: '20px', borderTop: '1px dashed #ccc', paddingTop: '20px' }}>
-                    <h2>Execute Session Batch</h2>
+                    <h2>Execute Session Transaction</h2>
                     <button
                         onClick={executeSessionBatch}
                         disabled={executing}
@@ -177,7 +216,7 @@ export function SessionMultiStepBenchmark() {
                             marginBottom: '20px',
                         }}
                     >
-                        {executing ? 'Executing...' : '2. Execute Multi-Step via Session'}
+                        {executing ? 'Executing...' : '2. Execute via UAP Session'}
                     </button>
                     <LogDisplay logs={execLogs} emptyMessage="Execution logs will appear here..." />
                 </div>

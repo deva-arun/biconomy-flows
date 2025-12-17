@@ -1,3 +1,18 @@
+# Running the App
+
+You can run the dev server with
+```bash
+npm run dev
+```
+
+Before running configure your .env file as follows
+```
+VITE_SESSION_PRIVATE_KEY=<private key used to sign smart session transactions>
+VITE_PRIVATE_KEY=<private key of account testing transactions>
+```
+
+The VITE_PRIVATE_KEY account must have some ETH and USDC in it on Base
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
