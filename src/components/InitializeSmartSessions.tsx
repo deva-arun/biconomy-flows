@@ -47,6 +47,7 @@ export function InitializeSmartSessions() {
                 addLog('Module installation needed. Payload received. Waiting for transaction...');
                 addLog(`Transaction Hash: ${payload.hash}`);
 
+                // Nexus smart account must be installed on every chain defined in orchestrator or this call will return an error
                 const receipt = await meeClient.waitForSupertransactionReceipt({ hash: payload.hash });
 
                 if (receipt.transactionStatus === 'SUCCESS' || receipt.transactionStatus === 'MINED_SUCCESS') {

@@ -4,6 +4,7 @@ import { MultiStepTransactionBenchmark } from './components/MultiStepTransaction
 import { BiconomyProvider } from './context/BiconomyContext';
 import { ExpandableSection } from './components/ExpandableSection';
 import { RuntimeInjectionBenchmark } from './components/RuntimeInjectionBenchmark';
+import { SessionMultiStepBenchmark } from './components/SessionMultiStepBenchmark';
 
 function App() {
   return (
@@ -25,6 +26,10 @@ function App() {
 
         <ExpandableSection title="4. Runtime Injection (Sweep)">
           <RuntimeInjectionBenchmark />
+        </ExpandableSection>
+
+        <ExpandableSection title="5. Session Multi-Step (Sudo)">
+          <SessionMultiStepBenchmark />
         </ExpandableSection>
       </div>
     </BiconomyProvider>
