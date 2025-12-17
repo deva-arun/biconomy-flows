@@ -7,6 +7,8 @@ import { base, arbitrum, baseSepolia } from "viem/chains";
 interface BiconomyContextType {
     orchestrator: any | null;
     meeClient: any | null;
+    sessionSigner: any | null;
+    sessionMeeClient: any | null;
     loading: boolean;
     error: Error | null;
     account: any;
@@ -27,6 +29,8 @@ export function useBiconomy() {
 export function BiconomyProvider({ children }: { children: ReactNode }) {
     const [orchestrator, setOrchestrator] = useState<any | null>(null);
     const [meeClient, setMeeClient] = useState<any | null>(null);
+    const [sessionSigner, setSessionSigner] = useState<any | null>(null);
+    const [sessionMeeClient, setSessionMeeClient] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
     const [account, setAccount] = useState<any | null>(null);
@@ -46,21 +50,25 @@ export function BiconomyProvider({ children }: { children: ReactNode }) {
                 setAccount(eoa);
 
                 console.log("Initializing Biconomy Orchestrator...");
+                const chainConfigurations = [
+                    {
+                        chain: base,
+                        transport: http(),
+                        version: getMEEVersion(MEEVersion.V2_1_0),
+                        accountAddress: eoa.address
+                    },
+                    /*
+                    {
+                        chain: arbitrum,
+                        transport: http(),
+                        version: getMEEVersion(MEEVersion.V2_1_0),
+                        accountAddress: eoa.address
+                    }
+                    */
+                ];
+
                 const orchestratorInstance = await toMultichainNexusAccount({
-                    chainConfigurations: [
-                        {
-                            chain: base,
-                            transport: http(),
-                            version: getMEEVersion(MEEVersion.V2_1_0),
-                            accountAddress: eoa.address
-                        },
-                        {
-                            chain: arbitrum,
-                            transport: http(),
-                            version: getMEEVersion(MEEVersion.V2_1_0),
-                            accountAddress: eoa.address
-                        }
-                    ],
+                    chainConfigurations,
                     signer: eoa
                 });
                 console.log("Biconomy Orchestrator initialized successfully");
@@ -71,6 +79,44 @@ export function BiconomyProvider({ children }: { children: ReactNode }) {
                 const meeClient = meeClientInstance.extend(meeSessionActions)
                 console.log("MeeClient initialized successfully");
                 setMeeClient(meeClient);
+
+                // Initialize Session Signer and Client
+                const sessionKey = import.meta.env.VITE_SESSION_PRIVATE_KEY;
+                if (sessionKey) {
+                    console.log("Initializing Session Signer...");
+                    const sSigner = privateKeyToAccount(sessionKey as `0x${string}`);
+                    setSessionSigner(sSigner);
+
+                    // Create user owned orchestrator with session signer
+                    // We need to use the SAME account address as the main orchestrator, but signed by the session key
+                    const userOwnedOrchestratorWithSessionSigner = await toMultichainNexusAccount({
+                        chainConfigurations: [
+                            {
+                                chain: base,
+                                transport: http(),
+                                version: getMEEVersion(MEEVersion.V2_1_0),
+                                accountAddress: orchestratorInstance.addressOn(base.id)
+                            },
+                            /*
+                            {
+                                chain: arbitrum,
+                                transport: http(),
+                                version: getMEEVersion(MEEVersion.V2_1_0),
+                                accountAddress: orchestratorInstance.addressOn(arbitrum.id)
+                            }
+                            */
+                        ],
+                        signer: sSigner
+                    });
+
+                    console.log("Initializing Session MeeClient...");
+                    const sessionClientRaw = await createMeeClient({ account: userOwnedOrchestratorWithSessionSigner });
+                    const sessionClient = sessionClientRaw.extend(meeSessionActions);
+                    setSessionMeeClient(sessionClient);
+                    console.log("Session Signer and Client initialized successfully");
+                } else {
+                    console.warn("VITE_SESSION_PRIVATE_KEY not found. Session features will be disabled.");
+                }
 
             } catch (err) {
                 console.error("Failed to initialize orchestrator:", err);
@@ -114,7 +160,7 @@ export function BiconomyProvider({ children }: { children: ReactNode }) {
     }
 
     return (
-        <BiconomyContext.Provider value={{ orchestrator, meeClient, loading, error, account, authorization, signAuthorization }}>
+        <BiconomyContext.Provider value={{ orchestrator, meeClient, sessionSigner, sessionMeeClient, loading, error, account, authorization, signAuthorization }}>
             {children}
         </BiconomyContext.Provider>
     );

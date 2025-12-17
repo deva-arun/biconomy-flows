@@ -22,9 +22,9 @@ export function RuntimeInjectionBenchmark() {
 
     // EOA 2 Setup
     const eoa2 = useMemo(() => {
-        const pk = import.meta.env.VITE_PK_TWO;
+        const pk = import.meta.env.VITE_SESSION_PRIVATE_KEY;
         if (!pk) return null;
-        return privateKeyToAccount(pk);
+        return privateKeyToAccount(pk as `0x${string}`);
     }, []);
 
     const getBatchQuote = async () => {
