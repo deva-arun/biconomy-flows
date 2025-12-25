@@ -4,6 +4,7 @@ import { base } from 'viem/chains';
 import { useLogger } from '../hooks/useLogger';
 import { LogDisplay } from './LogDisplay';
 import { toSmartSessionsModule } from '@biconomy/abstractjs';
+import { USDC_ADDRESS, BenchmarkButton, BenchmarkContainer, WarningMessage } from '../lib';
 
 export function InitializeSmartSessions() {
     const { meeClient, sessionSigner } = useBiconomy();
@@ -30,15 +31,13 @@ export function InitializeSmartSessions() {
             addLog('Creating SmartSessions Validator...');
             const ssValidator = toSmartSessionsModule({ signer: sessionSigner });
 
-            const usdcAddress = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'; // Base USDC
-
             addLog('Preparing SA for using Smart Sessions...');
             // prepareForPermissions checks if the module is installed. 
             // If not, it returns a payload to install it.
             const payload = await meeClient.prepareForPermissions({
                 smartSessionsValidator: ssValidator,
                 feeToken: {
-                    address: usdcAddress,
+                    address: USDC_ADDRESS,
                     chainId: base.id
                 }
             });
@@ -69,33 +68,29 @@ export function InitializeSmartSessions() {
     };
 
     return (
-        <div style={{ padding: '2rem', fontFamily: 'system-ui', borderTop: '1px solid #ccc', marginTop: '20px' }}>
+        <BenchmarkContainer bordered>
             <h1>Initialize Smart Sessions</h1>
-            <p style={{ color: '#666', marginBottom: '20px' }}>
+            <p className="section-description">
                 This step installs the Smart Session module on your Smart Account if it is not already installed.
             </p>
 
-            <button
+            <BenchmarkButton
                 onClick={installSmartSession}
                 disabled={loading || !sessionSigner}
-                style={{
-                    padding: '10px 20px',
-                    fontSize: '16px',
-                    cursor: (loading || !sessionSigner) ? 'not-allowed' : 'pointer',
-                    backgroundColor: (loading || !sessionSigner) ? '#ccc' : '#2196F3',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    marginBottom: '20px',
-                    marginTop: '10px'
-                }}
+                loading={loading}
+                loadingText="Installing..."
+                variant="primary"
+                className="mb-md mt-sm"
             >
-                {loading ? 'Installing...' : 'Install Smart Session Module'}
-            </button>
+                Install Smart Session Module
+            </BenchmarkButton>
 
-            {!sessionSigner && <div style={{ color: 'orange', marginBottom: '10px' }}>Warning: Session Signer not found. Check .env VITE_SESSION_PRIVATE_KEY</div>}
+            <WarningMessage
+                show={!sessionSigner}
+                message="Warning: Session Signer not found. Check .env VITE_SESSION_PRIVATE_KEY"
+            />
 
             <LogDisplay logs={logs} emptyMessage="Initialization logs will appear here..." />
-        </div>
+        </BenchmarkContainer>
     );
 }

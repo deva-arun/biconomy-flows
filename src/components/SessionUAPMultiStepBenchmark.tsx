@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useBiconomy } from '../context/BiconomyContext';
 import { base } from 'viem/chains';
-import { parseAbi, toFunctionSelector, getAbiItem, encodeFunctionData, parseUnits, pad, toHex, maxUint256 } from 'viem';
+import { toFunctionSelector, getAbiItem, encodeFunctionData, parseUnits, pad, toHex, maxUint256 } from 'viem';
 import { useLogger } from '../hooks/useLogger';
 import { LogDisplay } from './LogDisplay';
 import { getUniversalActionPolicy, ParamCondition } from '@biconomy/abstractjs';
+import { USDC_ADDRESS, ERC20_TRANSFER_ABI, EMPTY_PARAM_RULE, BenchmarkButton, BenchmarkContainer, WarningMessage, type SessionMode } from '../lib';
 
 export function SessionUAPMultiStepBenchmark() {
     const { meeClient, sessionMeeClient, sessionSigner, account } = useBiconomy();
@@ -14,10 +15,7 @@ export function SessionUAPMultiStepBenchmark() {
     const [loading, setLoading] = useState(false);
     const [executing, setExecuting] = useState(false);
     const [sessionDetails, setSessionDetails] = useState<any | null>(null);
-    const [mode, setMode] = useState<'ENABLE_AND_USE' | 'USE'>('ENABLE_AND_USE');
-
-    const usdcAddress = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
-    const erc20Abi = parseAbi(['function transfer(address to, uint256 amount) returns (bool)']);
+    const [mode, setMode] = useState<SessionMode>('ENABLE_AND_USE');
 
     const grantUAPSessionPermission = async () => {
         clearLogs();
@@ -41,14 +39,13 @@ export function SessionUAPMultiStepBenchmark() {
             const limitAmount = parseUnits('10', 6);
             addLog(`Spend Limit: 10 USDC (${limitAmount.toString()})`);
 
-
-            const EMPTY_RAW_RULE = {
+            const emptyRule = {
                 condition: ParamCondition.EQUAL,
                 offset: 0n,
                 isLimited: false,
-                ref: "0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`,
+                ref: EMPTY_PARAM_RULE.ref,
                 usage: { limit: 0n, used: 0n }
-            }
+            };
 
             // Construct UAP
             const uapPolicy = getUniversalActionPolicy({
@@ -66,21 +63,21 @@ export function SessionUAPMultiStepBenchmark() {
                             usage: { limit: limitAmount, used: 0n }
 
                         },
-                        EMPTY_RAW_RULE,
-                        EMPTY_RAW_RULE,
-                        EMPTY_RAW_RULE,
-                        EMPTY_RAW_RULE,
-                        EMPTY_RAW_RULE,
-                        EMPTY_RAW_RULE,
-                        EMPTY_RAW_RULE,
-                        EMPTY_RAW_RULE,
-                        EMPTY_RAW_RULE,
-                        EMPTY_RAW_RULE,
-                        EMPTY_RAW_RULE,
-                        EMPTY_RAW_RULE,
-                        EMPTY_RAW_RULE,
-                        EMPTY_RAW_RULE,
-                        EMPTY_RAW_RULE,
+                        emptyRule,
+                        emptyRule,
+                        emptyRule,
+                        emptyRule,
+                        emptyRule,
+                        emptyRule,
+                        emptyRule,
+                        emptyRule,
+                        emptyRule,
+                        emptyRule,
+                        emptyRule,
+                        emptyRule,
+                        emptyRule,
+                        emptyRule,
+                        emptyRule,
 
                     ]
                 }
@@ -89,14 +86,14 @@ export function SessionUAPMultiStepBenchmark() {
             const details = await meeClient.grantPermissionTypedDataSign({
                 redeemer: sessionSigner.address,
                 feeToken: {
-                    address: usdcAddress,
+                    address: USDC_ADDRESS,
                     chainId: base.id
                 },
                 actions: [
                     {
                         chainId: base.id,
-                        actionTarget: account.address, // USDC Contract
-                        actionTargetSelector: toFunctionSelector(getAbiItem({ abi: erc20Abi, name: 'transfer' })),
+                        actionTarget: USDC_ADDRESS,
+                        actionTargetSelector: toFunctionSelector(getAbiItem({ abi: ERC20_TRANSFER_ABI, name: 'transfer' })),
                         actionPolicies: [uapPolicy]
                     }
                 ],
@@ -129,9 +126,9 @@ export function SessionUAPMultiStepBenchmark() {
 
             // Instruction 1: Transfer 5 USDC
             const call1 = {
-                to: usdcAddress,
+                to: USDC_ADDRESS,
                 data: encodeFunctionData({
-                    abi: erc20Abi,
+                    abi: ERC20_TRANSFER_ABI,
                     functionName: 'transfer',
                     args: [sessionSigner.address, parseUnits('5', 6)]
                 })
@@ -141,7 +138,7 @@ export function SessionUAPMultiStepBenchmark() {
                 sessionDetails,
                 mode: mode,
                 feeToken: {
-                    address: usdcAddress,
+                    address: USDC_ADDRESS,
                     chainId: base.id
                 },
                 instructions: [
@@ -172,55 +169,43 @@ export function SessionUAPMultiStepBenchmark() {
     };
 
     return (
-        <div style={{ padding: '2rem', fontFamily: 'system-ui', borderTop: '1px solid #ccc', marginTop: '20px' }}>
+        <BenchmarkContainer bordered>
             <h1>Session Multi-Step (UAP Limits)</h1>
-            <p style={{ fontSize: '14px', color: '#666' }}>
+            <p className="section-description">
                 Universal Action Policy: Expires in 5 mins, Max 10 USDC cumulative spend.
             </p>
 
-            <button
+            <BenchmarkButton
                 onClick={grantUAPSessionPermission}
                 disabled={loading || !sessionSigner}
-                style={{
-                    padding: '10px 20px',
-                    fontSize: '16px',
-                    cursor: (loading || !sessionSigner) ? 'not-allowed' : 'pointer',
-                    backgroundColor: (loading || !sessionSigner) ? '#ccc' : '#4CAF50',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    marginBottom: '20px',
-                    marginRight: '10px'
-                }}
+                loading={loading}
+                loadingText="Granting..."
+                variant="success"
+                className="mb-md mr-sm"
             >
-                {loading ? 'Granting...' : '1. Grant UAP Permission'}
-            </button>
-            {!sessionSigner && <div style={{ color: 'orange', marginBottom: '10px' }}>Warning: Session Signer not initialized</div>}
+                1. Grant UAP Permission
+            </BenchmarkButton>
+
+            <WarningMessage show={!sessionSigner} message="Warning: Session Signer not initialized" />
 
             <LogDisplay logs={logs} emptyMessage="Permission logs will appear here..." />
 
             {sessionDetails && (
-                <div style={{ marginTop: '20px', borderTop: '1px dashed #ccc', paddingTop: '20px' }}>
+                <div className="section-divider">
                     <h2>Execute Session Transaction</h2>
-                    <button
+                    <BenchmarkButton
                         onClick={executeSessionBatch}
                         disabled={executing}
-                        style={{
-                            padding: '10px 20px',
-                            fontSize: '16px',
-                            cursor: executing ? 'not-allowed' : 'pointer',
-                            backgroundColor: executing ? '#ccc' : '#E91E63',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            marginBottom: '20px',
-                        }}
+                        loading={executing}
+                        loadingText="Executing..."
+                        variant="danger"
+                        className="mb-md"
                     >
-                        {executing ? 'Executing...' : '2. Execute via UAP Session'}
-                    </button>
+                        2. Execute via UAP Session
+                    </BenchmarkButton>
                     <LogDisplay logs={execLogs} emptyMessage="Execution logs will appear here..." />
                 </div>
             )}
-        </div>
+        </BenchmarkContainer>
     );
 }

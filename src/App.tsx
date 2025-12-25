@@ -5,7 +5,11 @@ import { BiconomyProvider } from './context/BiconomyContext';
 import { ExpandableSection } from './components/ExpandableSection';
 import { RuntimeInjectionBenchmark } from './components/RuntimeInjectionBenchmark';
 import { SessionMultiStepBenchmark } from './components/SessionMultiStepBenchmark';
-import { SessionUAPMultiStepBenchmark } from './components/SessionUAPMultiStepBenchmark';
+import { SessionUAPMultiStepBenchmark1 } from './components/SessionUAPMultiStepBenchmark1';
+import { SessionUAPMultiStepBenchmark2 } from './components/SessionUAPMultiStepBenchmark2';
+import { SessionUAPMultiStepBenchmark3 } from './components/SessionUAPMultiStepBenchmark3';
+import { SessionUAPMultiStepBenchmark4 } from './components/SessionUAPMultiStepBenchmark4';
+import { SessionUAPMultiStepBenchmark5 } from './components/SessionUAPMultiStepBenchmark5';
 
 function App() {
   return (
@@ -33,8 +37,24 @@ function App() {
           <SessionMultiStepBenchmark />
         </ExpandableSection>
 
-        <ExpandableSection title="6. Session Multi-Step (UAP Limits)">
-          <SessionUAPMultiStepBenchmark />
+        <ExpandableSection title="6. UAP 10 USDC Limit">
+          <SessionUAPMultiStepBenchmark1 />
+        </ExpandableSection>
+
+        <ExpandableSection title="7. Sudo + 1 Min Time Limit">
+          <SessionUAPMultiStepBenchmark2 />
+        </ExpandableSection>
+
+        <ExpandableSection title="8. Multi-Chain (Simulated)">
+          <SessionUAPMultiStepBenchmark3 />
+        </ExpandableSection>
+
+        <ExpandableSection title="9. Usage Limit (Max 3)">
+          <SessionUAPMultiStepBenchmark4 />
+        </ExpandableSection>
+
+        <ExpandableSection title="10. UAP + 5 Min Time Limit">
+          <SessionUAPMultiStepBenchmark5 />
         </ExpandableSection>
       </div>
     </BiconomyProvider>

@@ -3,6 +3,7 @@ import { useBiconomy } from '../context/BiconomyContext';
 import { useLogger } from '../hooks/useLogger';
 import { LogDisplay } from './LogDisplay';
 import { base } from 'viem/chains';
+import { USDC_ADDRESS, ZERO_ADDRESS, BenchmarkButton, BenchmarkContainer, WarningMessage } from '../lib';
 
 export function Eip7702Initialization() {
     const { account, signAuthorization, authorization, error, meeClient } = useBiconomy();
@@ -47,15 +48,12 @@ export function Eip7702Initialization() {
 
         setInitializing(true);
         try {
-            const zeroAddress = '0x0000000000000000000000000000000000000000';
-            const usdcAddress = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
-
             addLog('Getting quote for 0-value initialization transaction...');
 
             const quoteData = await meeClient.getQuote({
                 instructions: [{
                     calls: [{
-                        to: zeroAddress,
+                        to: ZERO_ADDRESS,
                         value: 0n,
                         data: '0x'
                     }],
@@ -64,7 +62,7 @@ export function Eip7702Initialization() {
                 delegate: true,
                 authorization,
                 feeToken: {
-                    address: usdcAddress,
+                    address: USDC_ADDRESS,
                     chainId: base.id
                 },
             });
@@ -85,45 +83,31 @@ export function Eip7702Initialization() {
     };
 
     return (
-        <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
+        <BenchmarkContainer>
             <h1>EIP-7702 Initialization</h1>
             <p>Connected Address: {account ? account.address : 'Not connected'}</p>
 
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                <button
+            <div className="flex-row-mb">
+                <BenchmarkButton
                     onClick={handleSignAuthorization}
                     disabled={!!authorization}
-                    style={{
-                        padding: '10px 20px',
-                        fontSize: '16px',
-                        cursor: authorization ? 'not-allowed' : 'pointer',
-                        backgroundColor: authorization ? '#ccc' : '#4CAF50',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px'
-                    }}
+                    variant={authorization ? 'primary' : 'success'}
                 >
                     {authorization ? 'Authorized' : '1. Sign Authorization'}
-                </button>
+                </BenchmarkButton>
 
-                <button
+                <BenchmarkButton
                     onClick={initializeNexus}
                     disabled={!authorization || initializing}
-                    style={{
-                        padding: '10px 20px',
-                        fontSize: '16px',
-                        cursor: (!authorization || initializing) ? 'not-allowed' : 'pointer',
-                        backgroundColor: (!authorization || initializing) ? '#ccc' : '#2196F3',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px'
-                    }}
+                    loading={initializing}
+                    loadingText="Initializing..."
+                    variant="primary"
                 >
-                    {initializing ? 'Initializing...' : '2. Initialize Nexus (0 Value Tx)'}
-                </button>
+                    2. Initialize Nexus (0 Value Tx)
+                </BenchmarkButton>
             </div>
 
             <LogDisplay logs={logs} emptyMessage="Logs will appear here..." />
-        </div>
+        </BenchmarkContainer>
     );
 }

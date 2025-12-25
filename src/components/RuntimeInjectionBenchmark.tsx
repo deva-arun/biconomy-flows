@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useBiconomy } from '../context/BiconomyContext';
 import { base } from 'viem/chains';
-import { parseAbi, createWalletClient, http, createPublicClient } from 'viem';
+import { createWalletClient, http, createPublicClient } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { useLogger } from '../hooks/useLogger';
 import { LogDisplay } from './LogDisplay';
 import { runtimeERC20BalanceOf } from '@biconomy/abstractjs';
+import { USDC_ADDRESS, ERC20_ABI, BenchmarkButton, BenchmarkContainer } from '../lib';
 
 export function RuntimeInjectionBenchmark() {
     const { meeClient, authorization, account, orchestrator } = useBiconomy();
@@ -51,9 +52,6 @@ export function RuntimeInjectionBenchmark() {
 
         setLoading(true);
         try {
-            const usdcAddress = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
-            const abi = parseAbi(['function transfer(address to, uint256 amount) returns (bool)']);
-
             addLog(`Account 1 (Nexus): ${account.address}`);
             addLog(`Account 2 (EOA): ${eoa2.address}`);
 
@@ -63,8 +61,8 @@ export function RuntimeInjectionBenchmark() {
                 type: 'default',
                 data: {
                     chainId: base.id,
-                    abi,
-                    to: usdcAddress,
+                    abi: ERC20_ABI,
+                    to: USDC_ADDRESS,
                     functionName: 'transfer',
                     args: [eoa2.address, 10000000n] // 10 USDC
                 }
@@ -76,14 +74,14 @@ export function RuntimeInjectionBenchmark() {
                 type: 'default',
                 data: {
                     chainId: base.id,
-                    abi,
-                    to: usdcAddress,
+                    abi: ERC20_ABI,
+                    to: USDC_ADDRESS,
                     functionName: 'transfer',
                     args: [
                         eoa2.address,
                         runtimeERC20BalanceOf({
                             targetAddress: account.address,
-                            tokenAddress: usdcAddress
+                            tokenAddress: USDC_ADDRESS
                         })
                     ]
                 }
@@ -95,7 +93,7 @@ export function RuntimeInjectionBenchmark() {
                 delegate: true,
                 authorization,
                 feeToken: {
-                    address: usdcAddress,
+                    address: USDC_ADDRESS,
                     chainId: base.id
                 },
             });
@@ -137,7 +135,6 @@ export function RuntimeInjectionBenchmark() {
 
         try {
             addCleanupLog('Starting Cleanup...');
-            const usdcAddress = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
             const account1 = privateKeyToAccount(import.meta.env.VITE_PRIVATE_KEY as `0x${string}`);
             const client1 = createWalletClient({
@@ -173,8 +170,8 @@ export function RuntimeInjectionBenchmark() {
             // 2. Transfer USDC back
             addCleanupLog('Reading EOA2 USDC Balance...');
             const balance = await publicClient.readContract({
-                address: usdcAddress,
-                abi: parseAbi(['function balanceOf(address) view returns (uint256)']),
+                address: USDC_ADDRESS,
+                abi: ERC20_ABI,
                 functionName: 'balanceOf',
                 args: [eoa2.address]
             });
@@ -183,8 +180,8 @@ export function RuntimeInjectionBenchmark() {
             if (balance > 0n) {
                 addCleanupLog('Sweeping USDC back to Account 1...');
                 const hashUsdc = await client2.writeContract({
-                    address: usdcAddress,
-                    abi: parseAbi(['function transfer(address to, uint256 amount) returns (bool)']),
+                    address: USDC_ADDRESS,
+                    abi: ERC20_ABI,
                     functionName: 'transfer',
                     args: [account.address, balance],
                     chain: base,
@@ -223,47 +220,46 @@ export function RuntimeInjectionBenchmark() {
     };
 
     return (
-        <div style={{ padding: '10px' }}>
-            <div style={{ marginBottom: '10px', display: 'flex', gap: '10px' }}>
-                <button
+        <BenchmarkContainer small>
+            <div className="flex-row-mb">
+                <BenchmarkButton
                     onClick={getBatchQuote}
                     disabled={loading || executing}
-                    style={{ padding: '8px 16px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: (loading || executing) ? 'not-allowed' : 'pointer' }}
+                    loading={loading}
+                    loadingText="Getting Quote..."
+                    variant="secondary"
                 >
-                    {loading ? 'Getting Quote...' : 'Get Batch Quote'}
-                </button>
+                    Get Batch Quote
+                </BenchmarkButton>
 
-                <button
+                <BenchmarkButton
                     onClick={executeBatch}
                     disabled={!quote || executing}
-                    style={{ padding: '8px 16px', backgroundColor: (!quote || executing) ? '#ccc' : '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: (!quote || executing) ? 'not-allowed' : 'pointer' }}
+                    loading={executing}
+                    loadingText="Executing..."
+                    variant="success"
                 >
-                    {executing ? 'Executing...' : 'Execute Batch'}
-                </button>
+                    Execute Batch
+                </BenchmarkButton>
             </div>
 
             <LogDisplay logs={logs} />
 
-            <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '10px' }}>
+            <div className="section-divider-solid">
                 <h4>Cleanup</h4>
-                <button
+                <BenchmarkButton
                     onClick={runCleanup}
                     disabled={!batchComplete || cleanupLoading}
-                    style={{
-                        padding: '8px 16px',
-                        backgroundColor: batchComplete ? '#28a745' : '#ccc',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: (!batchComplete || cleanupLoading) ? 'not-allowed' : 'pointer'
-                    }}
+                    loading={cleanupLoading}
+                    loadingText="Cleaning up..."
+                    variant="success"
                 >
-                    {cleanupLoading ? 'Cleaning up...' : 'Return All Funds'}
-                </button>
-                <div style={{ marginTop: '10px' }}>
+                    Return All Funds
+                </BenchmarkButton>
+                <div className="mt-sm">
                     <LogDisplay logs={cleanupLogs} />
                 </div>
             </div>
-        </div>
+        </BenchmarkContainer>
     );
 }

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useBiconomy } from '../context/BiconomyContext';
 import { base } from 'viem/chains';
-import { parseAbi } from 'viem';
 import { useLogger } from '../hooks/useLogger';
 import { LogDisplay } from './LogDisplay';
+import { USDC_ADDRESS, ERC20_TRANSFER_ABI, BenchmarkButton, BenchmarkContainer, WarningMessage } from '../lib';
 
 export function MultiStepTransactionBenchmark() {
     const { meeClient, authorization, account, orchestrator } = useBiconomy();
@@ -34,9 +34,6 @@ export function MultiStepTransactionBenchmark() {
 
         setLoading(true);
         try {
-            const usdcAddress = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
-            const abi = parseAbi(['function transfer(address to, uint256 amount) returns (bool)']);
-
             addLog('Building 2 separate Composable Calls (1x USDC each)...');
 
             // Build first instruction
@@ -44,8 +41,8 @@ export function MultiStepTransactionBenchmark() {
                 type: 'default',
                 data: {
                     chainId: base.id,
-                    abi,
-                    to: usdcAddress,
+                    abi: ERC20_TRANSFER_ABI,
+                    to: USDC_ADDRESS,
                     functionName: 'transfer',
                     args: [account.address, 200n]
                 }
@@ -57,8 +54,8 @@ export function MultiStepTransactionBenchmark() {
                 type: 'default',
                 data: {
                     chainId: base.id,
-                    abi,
-                    to: usdcAddress,
+                    abi: ERC20_TRANSFER_ABI,
+                    to: USDC_ADDRESS,
                     functionName: 'transfer',
                     args: [account.address, 100n]
                 }
@@ -72,7 +69,7 @@ export function MultiStepTransactionBenchmark() {
                 delegate: true,
                 authorization,
                 feeToken: {
-                    address: usdcAddress,
+                    address: USDC_ADDRESS,
                     chainId: base.id
                 },
             });
@@ -113,52 +110,41 @@ export function MultiStepTransactionBenchmark() {
     }
 
     return (
-        <div style={{ padding: '2rem', fontFamily: 'system-ui', borderTop: '1px solid #ccc', marginTop: '20px' }}>
+        <BenchmarkContainer bordered>
             <h1>Batch Transaction Benchmark (2x USDC Transfer)</h1>
-            <p style={{ fontSize: '14px', color: '#666' }}>Sends two atomic 0 USDC transfers to your own address on Base.</p>
-            <button
+            <p className="section-description">Sends two atomic 0 USDC transfers to your own address on Base.</p>
+
+            <BenchmarkButton
                 onClick={runTransaction}
                 disabled={loading || !authorization}
-                style={{
-                    padding: '10px 20px',
-                    fontSize: '16px',
-                    cursor: loading || !authorization ? 'not-allowed' : 'pointer',
-                    backgroundColor: loading || !authorization ? '#ccc' : '#2196F3',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    marginBottom: '20px',
-                    marginTop: '10px'
-                }}
+                loading={loading}
+                loadingText="Processing..."
+                variant="primary"
+                className="mb-md mt-sm"
             >
-                {loading ? 'Processing...' : 'Get Batch Quote'}
-            </button>
-            {!authorization && <div style={{ color: 'orange', marginBottom: '10px' }}>Warning: Sign Authorization above first</div>}
+                Get Batch Quote
+            </BenchmarkButton>
+
+            <WarningMessage show={!authorization} message="Warning: Sign Authorization above first" />
 
             <LogDisplay logs={logs} emptyMessage="Quote logs will appear here..." />
 
             {quote && (
-                <div style={{ marginTop: '20px', borderTop: '1px dashed #ccc', paddingTop: '20px' }}>
+                <div className="section-divider">
                     <h2>Execute Batch</h2>
-                    <button
+                    <BenchmarkButton
                         onClick={executeTransaction}
                         disabled={executing}
-                        style={{
-                            padding: '10px 20px',
-                            fontSize: '16px',
-                            cursor: executing ? 'not-allowed' : 'pointer',
-                            backgroundColor: executing ? '#ccc' : '#E91E63',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            marginBottom: '20px',
-                        }}
+                        loading={executing}
+                        loadingText="Executing..."
+                        variant="danger"
+                        className="mb-md"
                     >
-                        {executing ? 'Executing...' : 'Execute Batch'}
-                    </button>
+                        Execute Batch
+                    </BenchmarkButton>
                     <LogDisplay logs={execLogs} emptyMessage="Execution logs will appear here..." />
                 </div>
             )}
-        </div>
+        </BenchmarkContainer>
     );
 }
