@@ -129,6 +129,7 @@ export function SessionUAPMultiStepBenchmark1() {
                 loading={loading}
                 loadingText="Granting..."
                 variant="primary"
+                className="mb-md mr-sm"
             >
                 Grant Permission
             </BenchmarkButton>
