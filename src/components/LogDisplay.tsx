@@ -6,6 +6,7 @@ interface LogDisplayProps {
 }
 
 export function LogDisplay({ logs, emptyMessage = 'Logs will appear here...' }: LogDisplayProps) {
+    // test comment
     return (
         <div className="log-display">
             <span className="log-display-text">
